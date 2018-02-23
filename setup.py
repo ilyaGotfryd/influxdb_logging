@@ -1,24 +1,29 @@
-# sample ./setup.py file
-from setuptools import setup
+import os
+import pip
+from pip.req import parse_requirements
+from setuptools import find_packages, setup
+
+requirements = parse_requirements(
+    "requirements.txt", session=pip.download.PipSession())
+reqs = [str(ir.req) for ir in requirements]
 
 setup(
-    name="influx_logging",
-    description="Handlers for using InfluxDB as your logging backend.",
-    url="https://github.com/teamworksapp/influx_logging",
+    name="influxdb_logging",
+    version=(os.environ['CIRCLE_TAG']
+             if 'CIRCLE_TAG' in os.environ else '0.0.1'),
+    description="InfluxDB logging handlers",
+    url="https://github.com/gsr-zug/influxdb_logging",
     author="Jefferson Heard",
     author_email="jheard@teamworks.com",
-    license = "MIT",
-    packages = ['influx_logging','tests'],
-    version = "0.1.4",
-
-    # custom PyPI classifier for pytest plugins
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "Development Status :: 3 - Alpha",
-        "Topic :: Software Development :: Build Tools",
-        "Topic :: System :: Logging"
+    license="MIT",
+    packages=find_packages(),
+    include_package_data=True,
+    install_requires=reqs,
+    setup_requires=[
+        'pytest-runner'
     ],
-
-    install_requires=["influxdb"],
-    python_requires='>=3'
+    tests_require=[
+        "pytest-cov",
+        "pytest"
+    ]
 )

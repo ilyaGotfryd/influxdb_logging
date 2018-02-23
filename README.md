@@ -1,3 +1,8 @@
+[![Build Status][circleci-badge]][circleci-url]
+
+[circleci-badge]: https://circleci.com/gh/gsr-zug/influxdb_logging.png?style=shield&circle-token=57aaf01e6e19f789ce786ff6235a5a4139ae108a
+[circleci-url]: https://circleci.com/gh/gsr-zug/influxdb_logging
+
 # InfluxDB logging
 
 [InfluxDB](https://www.influxdata.com/) is a timeseries database that is optimized for realtime 
@@ -20,12 +25,12 @@ although by the time I was done they bear little resemblance to them.
 ## Example Usage
 
 ```python
-from influx_logging import InfluxHandler, BufferingInfluxHandler
+from influxdb_logging import InfluxHandler, BufferingInfluxHandler
 
 influx_handler = InfluxHandler(database='test_influx_handler')    
 logging.getLogger().setLevel(logging.DEBUG)
 
-influx_logger = logging.getLogger('influx_logging.tests.simple_message')
+influx_logger = logging.getLogger('influxdb_logging.tests.simple_message')
 influx_logger.addHandler(influx_handler)
 
 influx_logger.debug('Debug message')
@@ -39,7 +44,7 @@ except:
     influx_logger.exception('Exception message')
     
 res = influx_handler.client.query(
-    'SELECT * FROM "influx_logging:tests:simple_message"'
+    'SELECT * FROM "influxdb_logging:tests:simple_message"'
 )
 ```
 
@@ -47,33 +52,38 @@ res = influx_handler.client.query(
 
 ##### Parameters
 
-* **database**: The database you want log entries to go into.
-* **indexed_keys**: The names of keys to be treated as keys (as opposed to fields) in influxdb.
-* **debugging_fields**: Send debug fields if true (the default).
-* **extra_fields**: Send extra fields on the log record to graylog
-    if true (the default).
-* **localname**: Use specified hostname as source host.
-* **measurement**: Replace measurement with specified value. If not specified,
-    record.name will be passed as `logger` parameter.
-* **level_names**: Allows the use of string error level names instead
-    of numerical values. Defaults to `False`
-* **backpop**: Default `True`. Add a record for each item in the hierarchy of loggers. 
-* **\*\*client_kwargs**: Pass these args to the `InfluxDBClient` constructor
+|Name | Description |
+|-----|-------------|
+| database | The database you want log entries to go into. |
+| measurement | Replace measurement with specified value. If not specified, record.name will be passed as `logger` parameter. |
+| lazy_init | Enable lazy initialization. Defaults to False. |
+| include_fields | Include additional fields ({'record_name': 'field_name'}). Defaults to {}. |
+| exclude_fields | Exclude list of field names. Defaults to []. |
+| include_tags | Include additional tags ({'record_name': 'tag_name'}). Defaults to {}. |
+| exclude_tags | Exclude list of tag names. Defaults to []. |
+| extra_fields | Add extra fields if found. Defaults to True. |
+| extra_tags | Add extra tags if found. Defaults to True. |
+| include_stacktrace | Add stacktraces. Defaults to True. |
+| backpop | Default `True`. Add a record for each item in the hierarchy of loggers. |
+| **influxdb_opts | InfluxDB client options |
   
 ## class `BufferingInfluxHandler`
 
 ##### Parameters
 
-* **indexed_keys**: The names of keys to be treated as keys (as opposed to fields) in influxdb.
-* **debugging_fields**: Send debug fields if true (the default).
-* **extra_fields**: Send extra fields on the log record to graylog
-    if true (the default).
-* **localname**: Use specified hostname as source host.
-* **measurement**: Replace measurement with specified value. If not specified,
-    `record.name` will be passed as `logger` parameter.
-* **level_names**: Allows the use of string error level names instead
-    of numerical values. Defaults to `False`
-* **capacity**: The number of points to buffer before sending to InfluxDB.
-* **flush_interval**: Interval in seconds between flushes, maximum. Defaults to 5 seconds
-* **backpop**: Default `True`. Add a record for each item in the hierarchy of loggers. 
-* **\*\*client_kwargs**: Pass these args to the `InfluxDBClient` constructor
+|Name | Description |
+|-----|-------------|
+| capacity | The number of points to buffer before sending to InfluxDB. |
+| flush_interval | Interval in seconds between flushes, maximum. Defaults to 5 seconds |
+| database | The database you want log entries to go into. |
+| measurement | Replace measurement with specified value. If not specified, record.name will be passed as `logger` parameter. |
+| lazy_init | Enable lazy initialization. Defaults to False. |
+| include_fields | Include additional fields ({'record_name': 'field_name'}). Defaults to {}. |
+| exclude_fields | Exclude list of field names. Defaults to []. |
+| include_tags | Include additional tags ({'record_name': 'tag_name'}). Defaults to {}. |
+| exclude_tags | Exclude list of tag names. Defaults to []. |
+| extra_fields | Add extra fields if found. Defaults to True. |
+| extra_tags | Add extra tags if found. Defaults to True. |
+| include_stacktrace | Add stacktraces. Defaults to True. |
+| backpop | Default `True`. Add a record for each item in the hierarchy of loggers. |
+| **influxdb_opts | InfluxDB client options |

@@ -1,0 +1,67 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/python:3.6
+      - image: influxdb:1.4-alpine
+    working_directory: ~/myproject
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "requirements.txt" }}
+            - v1-dependencies-
+      - run:
+          name: install dependencies
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+            pip install -r requirements.txt | cat
+      - save_cache:
+          paths:
+            - venv
+          key: v1-dependencies-{{ checksum "requirements.txt" }}
+      - run:
+          name: run tests
+          command: |
+            . venv/bin/activate
+            python setup.py test
+      - store_test_results:
+          path: test-reports
+      - store_artifacts:
+          path: test-reports
+  release:
+    docker:
+      - image: circleci/python:3.6
+    steps:
+      - checkout
+      - run:
+          name: PyPI configuration
+          command: |
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = ${PYPI_USERNAME}" >> ~/.pypirc
+            echo -e "password = ${PYPI_PASSWORD}" >> ~/.pypirc
+      - run:
+          name: Publish packages to PyPI
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+            pip install twine
+            python setup.py sdist
+            twine upload dist/*
+workflows:
+  version: 2
+  build_and_deploy:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/
+      - release:
+          requires:
+           - build
+          filters:
+            tags:
+              only: /^\d+\.\d+\.\d+$/
+            branches:
+              ignore: /.*/
