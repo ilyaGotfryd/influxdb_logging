@@ -25,5 +25,12 @@ setup(
     tests_require=[
         "pytest-cov",
         "pytest"
-    ]
+    ],
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "Development Status :: 3 - Alpha",
+        "Topic :: Software Development :: Build Tools",
+        "Topic :: System :: Logging"
+    ],
+    python_requires='>=3'
 )
