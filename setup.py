@@ -10,7 +10,7 @@ reqs = [str(ir.req) for ir in requirements]
 setup(
     name="influxdb_logging",
     version=(os.environ['CIRCLE_TAG']
-             if 'CIRCLE_TAG' in os.environ else '1.0.3'),
+             if 'CIRCLE_TAG' in os.environ else '1.0.4'),
     description="InfluxDB logging handlers",
     url="https://github.com/gsr-zug/influxdb_logging",
     author="Jefferson Heard",

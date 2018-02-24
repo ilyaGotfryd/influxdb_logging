@@ -46,8 +46,9 @@ jobs:
           command: |
             python3 -m venv venv
             . venv/bin/activate
-            pip install twine
+            pip install wheel twine
             python setup.py sdist
+            python setup.py bdist_wheel
             twine upload dist/*
 workflows:
   version: 2
