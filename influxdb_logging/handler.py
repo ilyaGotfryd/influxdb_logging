@@ -1,9 +1,9 @@
 import logging
+import queue
 import sys
 import threading
-import time
 import traceback
-from logging.handlers import BufferingHandler
+from queue import Queue
 
 from influxdb import InfluxDBClient
 
@@ -47,7 +47,7 @@ DEFAULT_FIELDS = {
 
 
 class InfluxHandler(logging.Handler):
-    """InfluxDB Log handler
+    """InfluxDB logging handler
 
     :param database: The database you want log entries to go into.
     :param measurement: Replace measurement with specified value. If not specified,
@@ -78,6 +78,8 @@ class InfluxHandler(logging.Handler):
                  include_stacktrace: bool = True,
                  **influxdb_opts
                  ):
+        super().__init__()
+
         self._measurement = measurement
         self._client = InfluxDBClient(database=database, **influxdb_opts)
         self._backpop = backpop
@@ -101,8 +103,6 @@ class InfluxHandler(logging.Handler):
         if lazy_init is False:
             if database not in {x['name'] for x in self._client.get_list_database()}:
                 self._client.create_database(database)
-
-        logging.Handler.__init__(self)
 
     def get_client(self):
         return self._client
@@ -196,48 +196,53 @@ class InfluxHandler(logging.Handler):
         return ret
 
 
-class BufferingInfluxHandler(InfluxHandler, BufferingHandler):
-    """InfluxDB Log handler
+class AsyncInfluxHandler(InfluxHandler):
+    """InfluxDB Asynchronous logging handler
 
-    :param capacity: The number of points to buffer before sending to InfluxDB.
-    :param flush_interval: Interval in seconds between flushes, maximum. Defaults to 5 seconds
     :param kwargs: Pass these args to the InfluxHandler
     """
 
-    def __init__(self,
-                 capacity: int = 64,
-                 flush_interval: int = 5,
-                 **kwargs
-                 ):
-        self._flush_interval = flush_interval
+    _sentinel = None
 
-        InfluxHandler.__init__(self, **kwargs)
-        BufferingHandler.__init__(self, capacity)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-        self._thread = None if flush_interval is None else threading.Thread(
-            target=self._flush_thread, name="BufferingInfluxHandler", daemon=True)
+        self._queue: Queue = Queue()
+        self._thread: threading.Thread = threading.Thread(target=self._monitor)
+        self._thread.daemon = True
         self._thread.start()
 
-    def emit(self, record):
-        BufferingHandler.emit(self, record)
+    def _monitor(self):
+        q = self._queue
 
-    def _flush_thread(self):
+        has_task_done = hasattr(q, 'task_done')
         while True:
-            time.sleep(self._flush_interval)
-            self.flush()
+            try:
+                record = self._dequeue(True)
+                if record is self._sentinel:
+                    break
 
-    def flush(self):
-        self.acquire()
-        try:
-            if len(self.buffer):
-                # process all the buffered records
-                points = []
-                for record in self.buffer:
-                    points.extend(self._get_point(record))
+                # write record
+                super().emit(record)
 
-                self._client.write_points(points, retention_policy=self._retention_policy)
+                if has_task_done:
+                    q.task_done()
+            except queue.Empty:
+                break
 
-                # clear the buffer
-                self.buffer.clear()
-        finally:
-            self.release()
+    def _enqueue_sentinel(self):
+        self._queue.put_nowait(self._sentinel)
+
+    def _enqueue(self, record):
+        self._queue.put_nowait(record)
+
+    def _dequeue(self, block):
+        return self._queue.get(block)
+
+    def emit(self, record):
+        self._enqueue(record)
+
+    def stop(self):
+        self._enqueue_sentinel()
+        self._thread.join()
+        self._thread = None
