@@ -1,2 +1,2 @@
-from .handler import InfluxHandler, BufferingInfluxHandler
+from .handler import InfluxHandler
 
