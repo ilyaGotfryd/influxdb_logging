@@ -32,7 +32,7 @@ def test_simple_message():
     assert len(list(res.get_points())) == 5
 
 
-def test_buffered_handler():
+def test_async_handler():
     InfluxDBClient().drop_database('test_influx_handler')
 
     influx_handler = AsyncInfluxHandler(database='test_influx_handler')
@@ -52,7 +52,7 @@ def test_buffered_handler():
     res = influx_handler.get_client().query(
         'SELECT * FROM "influxdb_logging:tests:async_handler"'
     )
-    assert len(list(res.get_points())) == 0
+    assert len(list(res.get_points())) == 32
 
     for x in range(8):
         influx_logger.debug('Debug message')
@@ -75,7 +75,7 @@ def test_buffered_handler():
     res = influx_handler.get_client().query(
         'SELECT * FROM "influxdb_logging:tests:async_handler"'
     )
-    assert len(list(res.get_points())) == 64 + 32
+    assert len(list(res.get_points())) == 96
 
 
 
