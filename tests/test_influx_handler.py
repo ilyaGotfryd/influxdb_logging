@@ -35,7 +35,7 @@ def test_simple_message():
 def test_buffered_handler():
     InfluxDBClient().drop_database('test_influx_handler')
 
-    influx_handler = AsyncInfluxHandler(database='test_influx_handler', flush_interval=2)
+    influx_handler = AsyncInfluxHandler(database='test_influx_handler')
     logging.getLogger().setLevel(logging.DEBUG)
 
     influx_logger = logging.getLogger('influxdb_logging.tests.async_handler')
