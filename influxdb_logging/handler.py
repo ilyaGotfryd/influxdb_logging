@@ -3,8 +3,10 @@ import queue
 import sys
 import threading
 import traceback
+from logging.handlers import BufferingHandler
 from queue import Queue
 
+import time
 from influxdb import InfluxDBClient
 
 PY3 = sys.version_info[0] == 3
@@ -78,7 +80,7 @@ class InfluxHandler(logging.Handler):
                  include_stacktrace: bool = True,
                  **influxdb_opts
                  ):
-        super().__init__()
+        logging.Handler.__init__(self)
 
         self._measurement = measurement
         self._client = InfluxDBClient(database=database, **influxdb_opts)
@@ -196,6 +198,53 @@ class InfluxHandler(logging.Handler):
         return ret
 
 
+class BufferingInfluxHandler(InfluxHandler, BufferingHandler):
+    """InfluxDB Log handler
+
+    :param capacity: The number of points to buffer before sending to InfluxDB.
+    :param flush_interval: Interval in seconds between flushes, maximum. Defaults to 5 seconds
+    :param kwargs: Pass these args to the InfluxHandler
+    """
+
+    def __init__(self,
+                 capacity: int = 64,
+                 flush_interval: int = 5,
+                 **kwargs
+                 ):
+        self._flush_interval = flush_interval
+
+        InfluxHandler.__init__(self, **kwargs)
+        BufferingHandler.__init__(self, capacity)
+
+        self._thread = None if flush_interval is None else threading.Thread(
+            target=self._flush_thread, name="BufferingInfluxHandler", daemon=True)
+        self._thread.start()
+
+    def emit(self, record):
+        BufferingHandler.emit(self, record)
+
+    def _flush_thread(self):
+        while True:
+            time.sleep(self._flush_interval)
+            self.flush()
+
+    def flush(self):
+        self.acquire()
+        try:
+            if len(self.buffer):
+                # process all the buffered records
+                points = []
+                for record in self.buffer:
+                    points.extend(self._get_point(record))
+
+                self._client.write_points(points, retention_policy=self._retention_policy)
+
+                # clear the buffer
+                self.buffer.clear()
+        finally:
+            self.release()
+
+
 class AsyncInfluxHandler(InfluxHandler):
     """InfluxDB Asynchronous logging handler
 
@@ -205,7 +254,7 @@ class AsyncInfluxHandler(InfluxHandler):
     _sentinel = None
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        InfluxHandler.__init__(self, **kwargs)
 
         self._queue: Queue = Queue()
         self._thread: threading.Thread = threading.Thread(target=self._monitor)

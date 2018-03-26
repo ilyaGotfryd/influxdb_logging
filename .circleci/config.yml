@@ -4,6 +4,9 @@ jobs:
     docker:
       - image: circleci/python:3.6
       - image: influxdb:1.4-alpine
+        environment:
+          INFLUXDB_UDP_ENABLED: true
+          INFLUXDB_UDP_BIND_ADDRESS: ":8092"
     working_directory: ~/myproject
     steps:
       - checkout
