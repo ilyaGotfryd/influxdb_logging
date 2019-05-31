@@ -121,11 +121,11 @@ class InfluxHandler(logging.Handler):
         if value is None:
             return
         elif isinstance(value, dict):
-            for k in value.items():
+            for k,v in value.items():
                 if key:
-                    self._convert_to_point(key + '.' + k, value[k], fields, tags)
+                    self._convert_to_point(key + '.' + k, v, fields, tags)
                 else:
-                    self._convert_to_point(k, value[k], fields, tags)
+                    self._convert_to_point(k, v, fields, tags)
         elif isinstance(value, list):
             self._convert_to_point(key, ' '.join(value), fields, tags)
         else:
